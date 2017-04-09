@@ -33,6 +33,7 @@ GEM
     gherkin (3.2.0)
     gosu (0.10.6)
     gosu (0.10.6-x64-mingw32)
+    gosu (0.10.6-x86-mingw32)
     hasu (0.1.5)
       gosu
     i18n (0.7.0)
@@ -64,6 +65,7 @@ GEM
 PLATFORMS
   ruby
   x64-mingw32
+  x86-mingw32
 
 DEPENDENCIES
   byebug
