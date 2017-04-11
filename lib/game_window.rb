@@ -1,8 +1,47 @@
+class Poke
+  attr_reader :x, :y
+WINDOW_X = 1024
+attr_reader :type
+  def initialize(type)
+    #@type = type
+    @image = Gosu::Image.new('images/pika.png')
+
+# La vitesse de deplacement des ruby est variable
+    @velocity = Gosu::random(0.8, 3.3)
+
+    #On s'assure que les ruby restent bien dans la fenêtre
+    @x = rand * (WINDOW_X - @image.width)
+    # Les ruby apparraissent aléatoirement dans la fenêtre
+    @y = rand * (768 - @image.width)
+  end
+
+  def update
+    @y += @velocity
+  end
+
+  def draw
+    @image.draw(@x, @y, 1)
+  end
+
+  # def collect_pika(pika)
+  #   pika.reject! do |pika|
+  #     if Gosu.distance(@x, @y, pika.x, pika.y) < 35
+  #       @score += 10
+  #       #@beep.play
+  #       true
+  #     else
+  #       false
+  #     end
+  #   end
+  # end
+
+end
+
 class GameWindow < Hasu::Window
   SPRITE_SIZE = 128
   WINDOW_X = 1024
   WINDOW_Y = 768
-
+attr_reader :score
   def initialize
 
     super(WINDOW_X, WINDOW_Y, false)
@@ -13,11 +52,23 @@ class GameWindow < Hasu::Window
     @font = Gosu::Font.new(self, Gosu::default_font_name, 30)
     @flag = {x: WINDOW_X - SPRITE_SIZE, y: WINDOW_Y - SPRITE_SIZE}
     @music = Gosu::Song.new(self, "musics/koala.wav")
+    @items = []
+    @score = 0
     reset
 
   end
 
   def update
+
+    unless @items.size >= 5
+      r = rand
+      if r < 0.035
+        @items.push(Poke.new(:pika))
+      end
+    end
+    @disparution = rand(10..200)
+    @items.each(&:update)
+    @items.reject! {|item| item.y > WINDOW_Y }
 
      @player[:x] += @speed if button_down?(Gosu::Button::KbRight)
      @player[:x] -= @speed if button_down?(Gosu::Button::KbLeft)
@@ -25,10 +76,11 @@ class GameWindow < Hasu::Window
      @player[:x] -= @speed*2 if Gosu.button_down? Gosu::KbSpace and Gosu.button_down? Gosu::KbLeft
      @player[:x] = normalize(@player[:x], WINDOW_X- SPRITE_SIZE)
      @player[:y] = normalize(@player[:y], WINDOW_Y - SPRITE_SIZE)
+     #@player.collect_pika(@pika)
      jump if button_down?(Gosu::Button::KbUp)
      handle_jump if @jumping
-  handle_enemies
-    handle_quit
+     handle_enemies
+     handle_quit
     # if winning?
     #   reinit
     # end
@@ -39,7 +91,7 @@ class GameWindow < Hasu::Window
 
   def draw
     @font.draw("Level #{@enemies.length}", WINDOW_X - 100, 10, 3, 1.0, 1.0, Gosu::Color::BLACK)
-
+    @font.draw("Score: #{@score}", WINDOW_X - 1000, 10, 3, 1.0, 1.0, Gosu::Color::BLACK)
     @koala_sprite.draw(@player[:x], @player[:y], 2)
     @enemies.each do |enemy|
       @enemy_sprite.draw(enemy[:x], enemy[:y], 2)
@@ -47,6 +99,7 @@ class GameWindow < Hasu::Window
     (0..8).each do |x|
       (0..8).each do |y|
         @background_sprite.draw(x * SPRITE_SIZE, y * SPRITE_SIZE, 0)
+        @items.each(&:draw)
       end
     end
   end
@@ -76,6 +129,19 @@ class GameWindow < Hasu::Window
       @jumping = false
     end
   end
+
+  def collision(type)
+      case type
+      when :ruby_down
+        @score += 10
+        @sound_collect.play
+      when :ruby_up
+       @score -= 10
+       @sound_Nocollect.play
+      end
+
+      true
+    end
 
   private
 
