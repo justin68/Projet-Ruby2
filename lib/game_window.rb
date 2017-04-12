@@ -141,7 +141,7 @@ attr_reader :score
       enemies.reject do |enemy|
         (enemy[:x] - @player[:x]).abs < 50 and (enemy[:y] - @player[:y]).abs < 50
         if Gosu.distance(@player[:x], @player[:y], enemy[:x], enemy[:y]) < 50
-          @score -= 5
+          @score -= 10
           true
         else
           false
