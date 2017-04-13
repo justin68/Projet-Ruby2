@@ -36,8 +36,14 @@ attr_reader :score
     @background_sprite = Gosu::Image.new(self, 'images/pokemon.jpg', true)
     @sacha_sprite = Gosu::Image.new(self, 'images/sacha.png', true)
     @enemy_sprite = Gosu::Image.new(self, 'images/jessie.png', true)
+    @enemybis_sprite = Gosu::Image.new(self, 'images/james.png', true)
+    @image_win = Gosu::Image.new(self, 'images/james.png', true)
     @font = Gosu::Font.new(self, Gosu::default_font_name, 30)
-    @music = Gosu::Song.new(self, 'musics/poke1.wav')
+    @ko = Gosu::Image.new(self, 'images/KO.png', true)
+    @music = Gosu::Song.new(self, 'musics/poke2.wav')
+    @dead = Gosu::Sample.new(self, 'musics/ko.wav')
+    @win = Gosu::Sample.new(self, 'musics/win.wav')
+    @coups = Gosu::Sample.new(self, 'musics/coups.wav')
     @items = []
     @score = 0
     reset
@@ -59,6 +65,7 @@ attr_reader :score
     #Et lors de l'appui sur les touches claviers
     collect_pika(@items)
     collect_enemy(@enemies)
+    collect_enemybis(@enemiesbis)
      @player[:x] += @speed if button_down?(Gosu::Button::KbRight)
      @player[:x] -= @speed if button_down?(Gosu::Button::KbLeft)
      @player[:x] += @speed*2 if Gosu.button_down? Gosu::KbSpace and Gosu.button_down? Gosu::KbRight
@@ -69,15 +76,21 @@ attr_reader :score
      jump if button_down?(Gosu::Button::KbUp)
      handle_jump if @jumping
      handle_enemies
+     handle_enemiesbis
      handle_quit
 
     #Passage au niveau ou un reset du jeu en fonction du score
    case @score
    when 150
      @score = 0
+     @win.play
+     #@image_win.draw(100,100,3)
+     sleep(4)
      reinit
    when -200..-100
      @score = 0
+     @dead.play
+     sleep(3)
      reset
    end
   end
@@ -89,6 +102,10 @@ attr_reader :score
     @sacha_sprite.draw(@player[:x], @player[:y], 2)
     @enemies.each do |enemy|
       @enemy_sprite.draw(enemy[:x], enemy[:y], 2)
+    end
+
+    @enemiesbis.each do |enemy|
+      @enemybis_sprite.draw(enemy[:x], enemy[:y], 2)
     end
 
         @background_sprite.draw(-200, 0, 0)
@@ -136,12 +153,27 @@ attr_reader :score
         end
       end
     end
-    # A chaque pika collecté,  le score est decrémenté mias l'ennemi ne disparait pas
+
+    # A chaque ennemi collecté,  le score est decrémenté mias l'ennemi ne disparait pas
     def collect_enemy(enemies)
       enemies.reject do |enemy|
         (enemy[:x] - @player[:x]).abs < 50 and (enemy[:y] - @player[:y]).abs < 50
         if Gosu.distance(@player[:x], @player[:y], enemy[:x], enemy[:y]) < 50
           @score -= 10
+          @coups.play
+          true
+        else
+          false
+        end
+      end
+    end
+
+    def collect_enemybis(enemiesbis)
+      enemiesbis.reject do |enemy|
+        (enemy[:x] - @player[:x]).abs < 50 and (enemy[:y] - @player[:y]).abs < 50
+        if Gosu.distance(@player[:x], @player[:y], enemy[:x], enemy[:y]) < 50
+          @score -= 10
+          @coups.play
           true
         else
           false
@@ -156,8 +188,9 @@ attr_reader :score
   def reset
     @high_score = 0
     @enemies = []
+    @enemiesbis = []
     @speed = 3
-    #@music.stop
+    @music.stop
     @music.play
     reinit
   end
@@ -167,6 +200,7 @@ attr_reader :score
     @speed += 1
     @player = {x: 0, y: 768}
     @enemies.push({x: 500 + rand(100), y: 200 + rand(300)})
+    @enemiesbis.push({x: 500 + rand(100), y: 200 + rand(300)})
     high_score
   end
 
@@ -203,6 +237,26 @@ attr_reader :score
   #Fais déplacer les ennemis de façon aléatoire
   def handle_enemies
     @enemies = @enemies.map do |enemy|
+      enemy[:timer] ||= 0
+      if enemy[:timer] == 0
+        enemy[:result_x] = random_mouvement
+        enemy[:result_y] = random_mouvement
+        enemy[:timer] = 50 + rand(50)
+      end
+      enemy[:timer] -= 1
+
+      new_enemy = enemy.dup
+      new_enemy[:x] += new_enemy[:result_x] * @speed
+      new_enemy[:y] += new_enemy[:result_y] * @speed
+      new_enemy[:x] = normalize(new_enemy[:x], WINDOW_X - SPRITE_SIZE)
+      new_enemy[:y] = normalize(new_enemy[:y], WINDOW_Y - SPRITE_SIZE)
+      enemy = new_enemy
+      enemy
+    end
+  end
+
+  def handle_enemiesbis
+    @enemiesbis = @enemiesbis.map do |enemy|
       enemy[:timer] ||= 0
       if enemy[:timer] == 0
         enemy[:result_x] = random_mouvement
